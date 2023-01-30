@@ -1,12 +1,11 @@
-import os, sys, time, spotipy, requests, cache_util, datetime, pytz
-from cache_util import get_cached_token
+import os, sys, spotipy,cache_util, requests, datetime, pytz
 from  dotenv import load_dotenv
 from spotipy.oauth2 import SpotifyOAuth
-import sqlalchemy
 from sqlalchemy import create_engine, Column, Integer, String, ForeignKey
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
 
+#this assumes that the db is already up and running, prior to this a script has been run to seed the database and create the structure for it 
 def main(): 
     load_dotenv("/Users/franserr/Documents/portfolio/spotify_usage/env_files/client.env")     #load env vars
     load_dotenv("/Users/franserr/Documents/portfolio/spotify_usage/env_files/db.env")
@@ -47,24 +46,24 @@ def get_top_tracks(client:spotipy.Spotify ):
     lt_track_idx,lt_tracks_name, lt_artist_names=get_tracks_info(long_term_tracks)
     if(long_term_tracks['next']): 
         paginate_results(long_term_tracks, lt_track_idx, lt_tracks_name, lt_artist_names)
-    #get unique track, use a set
-    unique_track_idx=set()
+    #get unique track
+    unique_track_idx=[]
     #unique in context of for each unique id
     unique_track_artists=[] 
     unique_track_names=[]
     #init the iterables w/ short-term
-    unique_track_idx.update(st_track_idx)
+    unique_track_idx.extend(st_track_idx)
     unique_track_artists.extend(st_artist_names)
     unique_track_names.extend(st_tracks_name)
     #middle-term, then longterm
     for track, i in enumerate(mt_track_idx):
         if track not in unique_track_idx:
-            unique_track_idx.add(track)
+            unique_track_idx.append(track)
             unique_track_artists.append(mt_artist_names[i])
             unique_track_names.append(mt_tracks_name[i])
     for track, i in enumerate(lt_track_idx):
         if track not in unique_track_idx:
-            unique_track_idx.add(track)
+            unique_track_idx.append(track)
             unique_track_artists.append(lt_artist_names[i])
             unique_track_names.append(lt_tracks_name[i])
     assert(len(unique_track_idx)==len(unique_track_artists)==len(unique_track_names))
@@ -72,8 +71,6 @@ def get_top_tracks(client:spotipy.Spotify ):
     now= datetime.datetime.now(pytz.timezone('US/Pacific')).strftime('%Y-%m-%d %H:%M:%S')
     #part one: done
     #part two: connect to the my database and store it
-
-
     user=os.environ['user']
     pw=os.environ['password']
     port=os.environ['port']
@@ -81,7 +78,8 @@ def get_top_tracks(client:spotipy.Spotify ):
     engine=create_engine(connector_str)
 
     #check to see if the database contains the spotify id of the client 
-    # if not 
+
+
     
 
 
@@ -117,5 +115,6 @@ def get_tracks_info(tracks:dict):
         artists_name.append(artists) #get first artist associated with the song in the json obj
     assert(len(tracks_URI)==len(tracks_name)==len(artists_name))
     return tracks_URI, tracks_name, artists_name
-main()
+if __name__=='__main__':
+    main()
 
