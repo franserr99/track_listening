@@ -8,8 +8,9 @@ from database_mgmt import db_util
 
 #this assumes that the db is already up and running, prior to this a script has been run to seed the database and create the structure for it 
 def main(): 
-    init_client()
-    pass
+    
+    oauth, client=init_client()
+    get_top_tracks(client=client)
 def init_client(): 
     load_dotenv("/Users/franserr/Documents/portfolio/spotify_usage/env_files/client.env")     #load env vars
     load_dotenv("/Users/franserr/Documents/portfolio/spotify_usage/env_files/db.env")
@@ -41,29 +42,30 @@ flow:
     get unique songs across all three 
     find the songs not already in the database library and push those 
 '''
-def get_top_tracks(id: str):
-    
-
-
-
-    #this is to be used on newcomers but i will create another file where i use it to periodically update for all the users present in the DB 
-    #i think maybe store more info on the users?, i think i would need to store passwords and stuff 
-    #how would i do this if they gave me access before? 
-
-    oauth, client=init_client()
-    engine = db_util.connect_db()
-    Session =sessionmaker(bind=engine)
-    #check if the user is in the database already, if not, then create it 
+def welcome_user(engine: sqlalchemy.engine.Engine, client:spotipy.Spotify): 
     spotipy_id=client.me()['id']
-    db_sp_id=db_util.users_table()
+    db_sp_id=db_util.user_util.user_id_list(engine=engine)
     if spotipy_id not in db_sp_id: 
-        db_util.create_user(spotipy_id)
+        db_util.user_util.create_user(spotipy_id, engine)
+    after=db_util.user_util.users_list(engine=engine)
+    #did testing stage by stage of the flow
+    #print(after)
+    #sys.exit(0)
+def get_top_tracks(client:spotipy.Spotify):
+    
+    #how would i do this if they gave me access before? 
+    
+    engine = db_util.connection_util.connect_db()
+    Session =sessionmaker(bind=engine)
+    spotipy_id=client.me()['id']
+    #check if the user is in the database already, if not, then create it 
+    welcome_user(engine=engine,client=client)
     #get listening history for each near term 
     short_term_tracks=client.current_user_top_tracks(20,offset=0,time_range= "short_term" )
     st_track_idx,st_tracks_name, st_artist_names=get_tracks_info(short_term_tracks)
     if(short_term_tracks['next']): 
         paginate_results(short_term_tracks, st_track_idx, st_tracks_name, st_artist_names)
-    middle_term_tracks=client.current_user_top_tracks(20,offset=0,time_range= "middle_term" )
+    middle_term_tracks=client.current_user_top_tracks(20,offset=0,time_range= "medium_term" )
     mt_track_idx,mt_tracks_name, mt_artist_names=get_tracks_info(middle_term_tracks)
     if(middle_term_tracks['next']): 
         paginate_results(middle_term_tracks, mt_track_idx, mt_tracks_name, mt_artist_names)
@@ -76,12 +78,6 @@ def get_top_tracks(id: str):
     midterm=(mt_track_idx,mt_tracks_name, mt_artist_names)
     longterm=(lt_track_idx,lt_tracks_name, lt_artist_names)
 
-    #what if the lists are empty? figure out more edge cases and handle them by making this conditional call
-    #send listening data of each term to database
-    db_util.push_history_data(shortterm)
-    db_util.push_history_data(midterm)
-    db_util.push_history_data(longterm)
-
     #get unique tracks across all three terms 
     unique_track_idx=[]
     unique_track_artists=[] 
@@ -91,12 +87,12 @@ def get_top_tracks(id: str):
     unique_track_artists.extend(st_artist_names)
     unique_track_names.extend(st_tracks_name)
     #middle-term, then longterm
-    for track, i in enumerate(mt_track_idx):
+    for i, track in enumerate(mt_track_idx):
         if track not in unique_track_idx:
             unique_track_idx.append(track)
             unique_track_artists.append(mt_artist_names[i])
             unique_track_names.append(mt_tracks_name[i])
-    for track, i in enumerate(lt_track_idx):
+    for i, track in enumerate(lt_track_idx):
         if track not in unique_track_idx:
             unique_track_idx.append(track)
             unique_track_artists.append(lt_artist_names[i])
@@ -104,20 +100,25 @@ def get_top_tracks(id: str):
     assert(len(unique_track_idx)==len(unique_track_artists)==len(unique_track_names))
     
     #add the songs not already present
-    db_track_library_URIs=db_util.get_song_uris(engine=engine)
+    db_track_library_URIs=db_util.song_util.get_song_uris(engine=engine)
     new_db_tracks=[]
-    for track in unique_track_idx:
+    new_db_track_names=[]
+    new_db_artists_name=[]
+
+    for i, track in enumerate(unique_track_idx):
         if track not in db_track_library_URIs:
             new_db_tracks.append(track)
+            new_db_track_names.append(unique_track_names[i])
+            new_db_artists_name.append(unique_track_artists[i])
     #the function takes care of doing audiofeatures as well 
-    db_util.add_songs(engine=engine,track_uris= new_db_tracks,client=client)
-
-
-
-
-
-
+    db_util.song_util.add_songs(engine=engine,track_uris= new_db_tracks,track_names=new_db_track_names, track_artists=new_db_artists_name , client=client)
     #all the database relate stuff is done, i would like to add something more visual at the end, like something on the front end for the user 
+    #come back to this later, need to do more brainstorming, lets fill in the rest for the database stuff 
+    #what if the lists are empty? figure out more edge cases and handle them by making this conditional call
+    #send listening data of each term to database
+    db_util.history_util.push_history_data(shortterm, 'short_term', id=spotipy_id,engine=engine)
+    db_util.history_util.push_history_data(midterm, 'medium_term', id=spotipy_id,engine=engine)
+    db_util.history_util.push_history_data(longterm, 'long_term', id=spotipy_id,engine=engine)
 
 
 def paginate_results(tracks:dict, idx:list, track_names:list, artist_names:list):
