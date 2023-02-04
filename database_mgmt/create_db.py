@@ -41,10 +41,10 @@ def main():
     class listening_history(base):
         __tablename__='history'
         user_id = Column(String(50),ForeignKey('users.id'), primary_key=True)
-        date_recorded=Column(DateTime)
+        date_recorded=Column(DateTime, primary_key=True)
         relative_term=Column(String(30), primary_key=True)
         track_id= Column (String(100) , ForeignKey('library.uri'), primary_key=True)
-        __table_args__ = (PrimaryKeyConstraint('user_id', 'relative_term', 'track_id'),)
+        __table_args__ = (PrimaryKeyConstraint('user_id', 'relative_term', 'track_id', 'date_recorded'),)
         #extra comma to indicate the object is a tuple even though it only has one element
     class users(base): #keep a high level users table in order to expand this another way if you want to later
         __tablename__='users'

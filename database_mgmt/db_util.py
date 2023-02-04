@@ -55,7 +55,7 @@ class user_util:
 class history_util:
     @staticmethod
     def push_history_data(records:tuple, term:str, id:str,engine: sqlalchemy.engine.Engine): #an example of expected tuple:near_term= (track_idx,tracks_name,artist_names)
-        assert(term==('short_term' or 'medium_term' or 'long_term' )) 
+        assert( term=='short_term' or term=='medium_term' or term=='long_term' )
         #recall: the history table has the following fields: user_id, date_recorded, relative_term, track_id
         track_idx= records[0] #list of track ids
         tracks_name= records[1] #list of corresponding track names
@@ -191,6 +191,8 @@ class song_util:
                 session.commit()
         finally:
             session.close()
+        if not track_uris or len(track_uris)==0:
+            return 
         #PART TWO: add the features to the library
         partitioned_list=[] 
         trackIDX=track_uris
@@ -274,6 +276,9 @@ class song_util:
             track_artists=Column(String(100))
         try:
             song_URIs=[track_library.uri for track_library in session.query(track_library).all() ]
+            print(song_URIs)
+            print(session.query(track_library).all())
+            #sys.exit(1)
             return song_URIs
         finally:
             session.close()

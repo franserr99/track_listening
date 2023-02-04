@@ -100,7 +100,9 @@ def get_top_tracks(client:spotipy.Spotify):
     assert(len(unique_track_idx)==len(unique_track_artists)==len(unique_track_names))
     
     #add the songs not already present
+    print(unique_track_idx)
     db_track_library_URIs=db_util.song_util.get_song_uris(engine=engine)
+    
     new_db_tracks=[]
     new_db_track_names=[]
     new_db_artists_name=[]
@@ -111,14 +113,15 @@ def get_top_tracks(client:spotipy.Spotify):
             new_db_track_names.append(unique_track_names[i])
             new_db_artists_name.append(unique_track_artists[i])
     #the function takes care of doing audiofeatures as well 
-    db_util.song_util.add_songs(engine=engine,track_uris= new_db_tracks,track_names=new_db_track_names, track_artists=new_db_artists_name , client=client)
+    if (len (new_db_tracks)>0):
+        db_util.song_util.add_songs(engine=engine,track_uris= new_db_tracks,track_names=new_db_track_names, track_artists=new_db_artists_name , client=client)
     #all the database relate stuff is done, i would like to add something more visual at the end, like something on the front end for the user 
     #come back to this later, need to do more brainstorming, lets fill in the rest for the database stuff 
     #what if the lists are empty? figure out more edge cases and handle them by making this conditional call
     #send listening data of each term to database
-    db_util.history_util.push_history_data(shortterm, 'short_term', id=spotipy_id,engine=engine)
-    db_util.history_util.push_history_data(midterm, 'medium_term', id=spotipy_id,engine=engine)
-    db_util.history_util.push_history_data(longterm, 'long_term', id=spotipy_id,engine=engine)
+    db_util.history_util.push_history_data(records=shortterm,term='short_term', id=spotipy_id,engine=engine)
+    db_util.history_util.push_history_data(records=midterm,term='medium_term', id=spotipy_id,engine=engine)
+    db_util.history_util.push_history_data(records=longterm,term='long_term', id=spotipy_id,engine=engine)
 
 
 def paginate_results(tracks:dict, idx:list, track_names:list, artist_names:list):
