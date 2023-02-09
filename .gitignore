@@ -3,3 +3,4 @@ client.env
 .cache
 __pycache__
 db.env
+sender.env

@@ -46,6 +46,19 @@ def main():
         track_id= Column (String(100) , ForeignKey('library.uri'), primary_key=True)
         __table_args__ = (PrimaryKeyConstraint('user_id', 'relative_term', 'track_id', 'date_recorded'),)
         #extra comma to indicate the object is a tuple even though it only has one element
+    class potential_recs(base):
+        __tablename__='potential_recs'
+        user_id = Column(String(50),ForeignKey('users.id'), primary_key=True)
+        date_recorded=Column(DateTime, primary_key=True)
+        track_id= Column (String(100) , ForeignKey('library.uri'), primary_key=True)
+        __table_args__ = (PrimaryKeyConstraint('user_id', 'track_id', 'date_recorded'),)
+    class seed_tracks(base):
+        __tablename__='seed_tracks'
+        user_id = Column(String(50),ForeignKey('users.id'), primary_key=True)
+        date_recorded=Column(DateTime, primary_key=True)
+        track_id= Column (String(100) , ForeignKey('library.uri'), primary_key=True)
+        __table_args__ = (PrimaryKeyConstraint('user_id', 'track_id', 'date_recorded'),)
+
     class users(base): #keep a high level users table in order to expand this another way if you want to later
         __tablename__='users'
         id = Column(String(50), primary_key=True, unique=True)
